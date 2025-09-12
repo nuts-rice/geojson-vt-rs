@@ -10,7 +10,7 @@ with pkgs;
 let
   unstable = import
     (builtins.fetchTarball {
-      url = "https://github.com/NixOS/nixpkgs/archive/cb9a96f23c491c081b38eab96d22fa958043c9fa.tar.gz"; # Ger from here: https://github.com/NixOS/nixpkgs/tree/nixos-unstable
+      url = "https://github.com/NixOS/nixpkgs/archive/11cb3517b3af6af300dd6c055aeda73c9bf52c48.tar.gz"; # Get from here: https://github.com/NixOS/nixpkgs/tree/nixos-unstable
     })
     { };
 in
