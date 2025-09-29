@@ -1264,3 +1264,103 @@ fn preprocessed_geojson_comparison_with_geojson_to_tile() {
         }
     }
 }
+
+#[test]
+fn test_shift_coords() {
+    use crate::types::*;
+    use crate::wrap::shift_coords;
+
+    // test features of different types to be shifted
+    let mut features = vec![
+        VtFeature {
+            geometry: VtGeometry::Point(VtPoint::new(1.0, 2.0, 0.0)),
+            properties: serde_json::Map::new(),
+            id: None,
+            bbox: crate::BBox::new(crate::Point2D::new(1.0, 2.0), crate::Point2D::new(1.0, 2.0)),
+            num_points: 1,
+        },
+        VtFeature {
+            geometry: VtGeometry::LineString(VtLineString {
+                elements: vec![VtPoint::new(3.0, 4.0, 0.0), VtPoint::new(5.0, 6.0, 0.0)],
+                dist: 0.0,
+                seg_start: 0.0,
+                seg_end: 0.0,
+            }),
+            properties: serde_json::Map::new(),
+            id: None,
+            bbox: crate::BBox::new(crate::Point2D::new(3.0, 4.0), crate::Point2D::new(5.0, 6.0)),
+            num_points: 2,
+        },
+    ];
+
+    let offset = 10.0;
+    shift_coords(&mut features, offset);
+
+    match &features[0].geometry {
+        VtGeometry::Point(point) => {
+            assert_eq!(point.x, 11.0);
+            assert_eq!(point.y, 2.0);
+        }
+        _ => panic!("Expected point geometry"),
+    }
+
+    match &features[1].geometry {
+        VtGeometry::LineString(line) => {
+            assert_eq!(line.elements[0].x, 13.0);
+            assert_eq!(line.elements[0].y, 4.0);
+            assert_eq!(line.elements[1].x, 15.0);
+            assert_eq!(line.elements[1].y, 6.0);
+        }
+        _ => panic!("Expected linestring geometry"),
+    }
+
+    // test bboxs being shifted
+    assert_eq!(features[0].bbox.min.x, 11.0);
+    assert_eq!(features[0].bbox.max.x, 11.0);
+    assert_eq!(features[0].bbox.min.y, 2.0);
+    assert_eq!(features[0].bbox.max.y, 2.0);
+
+    assert_eq!(features[1].bbox.min.x, 13.0);
+    assert_eq!(features[1].bbox.max.x, 15.0);
+    assert_eq!(features[1].bbox.min.y, 4.0);
+    assert_eq!(features[1].bbox.max.y, 6.0);
+}
+
+#[test]
+fn test_wrap_prepending() {
+    use crate::types::*;
+    use crate::wrap::wrap;
+
+    // test features that will be wrapped or not
+    let features = vec![
+        VtFeature {
+            geometry: VtGeometry::Point(VtPoint::new(-0.5, 0.5, 0.0)), // Wrapped left
+            properties: serde_json::Map::new(),
+            id: None,
+            bbox: crate::BBox::new(
+                crate::Point2D::new(-0.5, 0.5),
+                crate::Point2D::new(-0.5, 0.5),
+            ),
+            num_points: 1,
+        },
+        VtFeature {
+            geometry: VtGeometry::Point(VtPoint::new(0.5, 0.5, 0.0)), // not wrapped center
+            properties: serde_json::Map::new(),
+            id: None,
+            bbox: crate::BBox::new(crate::Point2D::new(0.5, 0.5), crate::Point2D::new(0.5, 0.5)),
+            num_points: 1,
+        },
+        VtFeature {
+            geometry: VtGeometry::Point(VtPoint::new(1.5, 0.5, 0.0)), // Wrapped right
+            properties: serde_json::Map::new(),
+            id: None,
+            bbox: crate::BBox::new(crate::Point2D::new(1.5, 0.5), crate::Point2D::new(1.5, 0.5)),
+            num_points: 1,
+        },
+    ];
+    let wrapped = wrap(&features, 0.1, false);
+    assert!(
+        wrapped.len() >= features.len(),
+        "Wrapped features should contain at least the original features"
+    );
+}
